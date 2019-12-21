@@ -3,8 +3,10 @@ from asyncio_pool import AioPool
 from bs4 import BeautifulSoup
 import csv
 import httpx
+import json
 import os
 import pdb
+import re
 from tenacity import retry, stop_after_attempt
 
 
@@ -20,6 +22,25 @@ class Serp():
 
 
 async def fetch_listing_urls(*, con_limit):
+    def get_listing_urls_from_response(response_text):
+
+        soup = BeautifulSoup(response_text, "html.parser")
+        json_pattern = re.compile(r"SearchResultsPage")
+        json_soup = soup.find("script", {"type": "application/ld+json"}, text=json_pattern)
+        if json_soup:
+            # Quest: it seems like there's got to be a better way to get rid
+            # of these characters and make a valid JSON
+            json_str = json_soup.contents[0].replace("\r", "").replace("\n", "")
+            json_str = json_str.replace("\'", "").replace('\\"', '').replace("\t", "")
+            script_dict = json.loads(json_str)
+            listing_dicts = script_dict["about"]
+
+            urls = [listing["item"]["url"] for listing in listing_dicts]
+
+            return urls
+
+        return None
+
     def create_paginated_urls(obj):
         soup = BeautifulSoup(obj.response_text, "html.parser")
         next_page_present = True if soup.find("a", {"title": "Next"}) else False
@@ -173,6 +194,13 @@ async def fetch_listing_urls(*, con_limit):
 
     serp_response_list = [obj.response_text for obj in data_objects]
     serp_response_list.extend(paginated_url_response_list)
+
+    # Get Listing URLs
+    listing_urls = []
+    for serp_response in serp_response_list:
+        listing_url_holding = get_listing_urls_from_response(serp_response)
+        if listing_url_holding:
+            listing_urls.extend(listing_url_holding)
 
     pdb.set_trace()
 
