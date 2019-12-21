@@ -36,9 +36,34 @@ class Listing():
         return self.custom_name
 
 
-async def fetch_listings(*, con_limit):
-    print("test")
+async def fetch_listings(*, listing_objs, con_limit):
+    async def fetch_obj_with_url(obj):
+        SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+        SCRAPERAPI_URL = 'http://api.scraperapi.com'
+
+        param_payload = {
+            'api_key': SCRAPER_API_KEY,
+            'url': obj.url,
+        }
+
+        async with httpx.AsyncClient() as client:
+            print(f"Trying {obj.custom_name}")
+            r = await client.get(SCRAPERAPI_URL, params=param_payload, timeout=60)
+            test_soup = BeautifulSoup(r.text, 'html.parser')
+            if test_soup.find("h1", {"class": "bfsTitle"}):
+                obj.response_text = r.text
+                print(f"{obj.custom_name} complete!")
+            else:
+                obj.response_text = "Soup test failed"
+                raise ValueError(f"Soup test failed for {obj.custom_name}")
+
+    listing_objs = listing_objs[:1]
     # Scrape all the listings (save response to an object)
+    pool = AioPool(size=con_limit)
+    await pool.map(fetch_obj_with_url, listing_objs)
+
+    pdb.set_trace()
+
     # Parse all the available listing fields into a JSON
     # Price details
     # Description
@@ -47,7 +72,6 @@ async def fetch_listings(*, con_limit):
 
 async def fetch_listing_urls(*, con_limit):
     def create_listing_obj_from_response(response_text):
-
         soup = BeautifulSoup(response_text, "html.parser")
         json_pattern = re.compile(r"SearchResultsPage")
         json_soup = soup.find("script", {"type": "application/ld+json"}, text=json_pattern)
@@ -233,8 +257,10 @@ async def fetch_listing_urls(*, con_limit):
         if listing_obj_holding:
             listing_objs.extend(listing_obj_holding)
 
-    pdb.set_trace()
+    return listing_objs
 
 
 if __name__ == "__main__":
-    asyncio.run(fetch_listing_urls(con_limit=10))
+    con_limit = 10
+    listing_objs = asyncio.run(fetch_listing_urls(con_limit=con_limit))
+    asyncio.run(fetch_listings(listing_objs=listing_objs, con_limit=con_limit))
