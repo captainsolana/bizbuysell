@@ -1,20 +1,20 @@
-﻿Normal Name,i Value
-Agriculture,01
-Automotive and Boat,H1
-Beauty and Personal Care,E0
-Building and Construction,YD
-Communication and Media,48
-Education and Child,82
-Entertainment and Recreation,79
-Financial Services,A8
-Health Care and Fitness,80
-Manufacturing,YC
-Non-Classifiable Establisments,99
-Online and Technology,A5
-Pet Services,LA
-Restaurants and Food,AF
-Retail,YA
-Service,YB
-Transportation and Storage,42
-Travel,M7
-Wholesale and Distribution,YE
+﻿name,i_value
+agriculture,1
+automotive-and-boat,H1
+beauty-and-personal-care,E0
+building-and-construction,YD
+communication-and-media,48
+education-and-child,82
+entertainment-and-recreation,79
+financial-services,A8
+health-care-and-fitness,80
+manufacturing,YC
+non-classifiable-establisments,99
+online-and-technology,A5
+pet-services,LA
+restaurants-and-food,AF
+retail,YA
+service,YB
+transportation-and-storage,42
+travel,M7
+wholesale-and-distribution,YE

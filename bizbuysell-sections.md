@@ -1,3 +1,10 @@
+# Big Structure
+
+- [] Get starting SERP urls
+- [] Get listing urls
+- [] Scrape listings
+
+
 # Search
 POST to https://www.bizbuysell.com/listings/handlers/searchresultsredirector.ashx
 Example CURL https://termbin.com/1mng
@@ -7,6 +14,13 @@ s = State abbreviation (use as many as you want).  E.g. AL or MI
 x = 1 <= Hide listings without a price
 hb = h Hide home-based
 
+# Serps
+
+Max results = 1,500
+Max results per SERP = 50
+Info that's needed is in     
+<script type="application/ld+json" defer>  
+with the text: "@type": "SearchResultsPage"
 
 # Listing
 3 sections
