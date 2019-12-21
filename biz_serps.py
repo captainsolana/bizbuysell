@@ -21,8 +21,32 @@ class Serp():
         return self.name
 
 
+class Listing():
+    def __init__(self, custom_name, **entries):
+        self.__dict__.update(entries)
+        self.custom_name = custom_name
+
+    def __hash__(self):
+        return hash(self.custom_name)
+
+    def __eq__(self, other):
+        return self.custom_name == other.custom_name
+
+    def __repr__(self):
+        return self.custom_name
+
+
+async def fetch_listings(*, con_limit):
+    print("test")
+    # Scrape all the listings (save response to an object)
+    # Parse all the available listing fields into a JSON
+    # Price details
+    # Description
+    # Listing Details
+
+
 async def fetch_listing_urls(*, con_limit):
-    def get_listing_urls_from_response(response_text):
+    def create_listing_obj_from_response(response_text):
 
         soup = BeautifulSoup(response_text, "html.parser")
         json_pattern = re.compile(r"SearchResultsPage")
@@ -35,9 +59,16 @@ async def fetch_listing_urls(*, con_limit):
             script_dict = json.loads(json_str)
             listing_dicts = script_dict["about"]
 
-            urls = [listing["item"]["url"] for listing in listing_dicts]
+            listing_objs = []
+            for listing_dict in listing_dicts:
+                if "productid" in listing_dict["item"]:
+                    listing_objs.append(
+                        Listing(
+                            custom_name=listing_dict["item"]["productid"],
+                            **listing_dict["item"])
+                    )
 
-            return urls
+            return listing_objs
 
         return None
 
@@ -195,12 +226,12 @@ async def fetch_listing_urls(*, con_limit):
     serp_response_list = [obj.response_text for obj in data_objects]
     serp_response_list.extend(paginated_url_response_list)
 
-    # Get Listing URLs
-    listing_urls = []
+    # Get Listing Objs
+    listing_objs = []
     for serp_response in serp_response_list:
-        listing_url_holding = get_listing_urls_from_response(serp_response)
-        if listing_url_holding:
-            listing_urls.extend(listing_url_holding)
+        listing_obj_holding = create_listing_obj_from_response(serp_response)
+        if listing_obj_holding:
+            listing_objs.extend(listing_obj_holding)
 
     pdb.set_trace()
 

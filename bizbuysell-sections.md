@@ -1,7 +1,7 @@
 # Big Structure
 
 - [x] Get starting SERP urls
-- [] Get listing urls
+- [x] Get listing urls
 - [] Scrape listings
 
 
