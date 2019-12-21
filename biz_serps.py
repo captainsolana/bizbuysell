@@ -10,6 +10,16 @@ import re
 from tenacity import retry, stop_after_attempt
 
 
+def list_to_dict(rlist):
+    temp_dict = dict(map(lambda s: s.split(':'), rlist))
+    clean_dict = {}
+    for key in temp_dict.keys():
+        clean_key = key.strip()
+        clean_value = temp_dict[key].strip()
+        clean_dict[clean_key] = clean_value
+    return clean_dict
+
+
 class Serp():
     def __init__(self, *, url, name, formdata):
         self.name = name
@@ -57,14 +67,40 @@ async def fetch_listings(*, listing_objs, con_limit):
                 obj.response_text = "Soup test failed"
                 raise ValueError(f"Soup test failed for {obj.custom_name}")
 
+    def parse_financials_div(soup):
+        financials_soup = soup.find("div", {"class": "row-fluid b-margin financials clearfix"})
+        if financials_soup:
+            financials_text = financials_soup.text
+            financials_list = financials_text.split("\r\n")[:-1]
+            financials_dict = list_to_dict(financials_list)
+
+            not_included = []
+            for key in financials_dict:
+                if "*" in financials_dict[key]:
+                    not_included.append(key)
+
+            financials_dict["notIncluded"] = not_included
+
+            for key in financials_dict:
+                try:
+                    financials_dict[key] = int(re.sub("[^0-9]", "", financials_dict[key]))
+                except Exception:
+                    continue
+
+            return financials_dict
+
     listing_objs = listing_objs[:1]
     # Scrape all the listings (save response to an object)
     pool = AioPool(size=con_limit)
     await pool.map(fetch_obj_with_url, listing_objs)
 
-    pdb.set_trace()
+    # Parse available listing fields into a dict
+    for listing_obj in listing_objs:
+        soup = BeautifulSoup(listing_obj.response_text, "html.parser")
+        financials_dict = parse_financials_div(soup)
+        listing_obj.financials = financials_dict
 
-    # Parse all the available listing fields into a JSON
+    pdb.set_trace()
     # Price details
     # Description
     # Listing Details
