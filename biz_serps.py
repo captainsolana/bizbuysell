@@ -67,29 +67,36 @@ async def fetch_listings(*, listing_objs, con_limit):
                 obj.response_text = "Soup test failed"
                 raise ValueError(f"Soup test failed for {obj.custom_name}")
 
-    def parse_financials_div(soup):
-        financials_soup = soup.find("div", {"class": "row-fluid b-margin financials clearfix"})
-        if financials_soup:
-            financials_text = financials_soup.text
-            financials_list = financials_text.split("\r\n")[:-1]
-            financials_dict = list_to_dict(financials_list)
+    def parse_financials_div(financials_soup):
+        financials_text = financials_soup.text
+        financials_list = financials_text.split("\r\n")[:-1]
+        financials_dict = list_to_dict(financials_list)
 
-            not_included = []
-            for key in financials_dict:
-                if "*" in financials_dict[key]:
-                    not_included.append(key)
+        not_included = []
+        for key in financials_dict:
+            if "*" in financials_dict[key]:
+                not_included.append(key)
 
-            financials_dict["notIncluded"] = not_included
+        financials_dict["notIncluded"] = not_included
 
-            for key in financials_dict:
-                try:
-                    financials_dict[key] = int(re.sub("[^0-9]", "", financials_dict[key]))
-                except Exception:
-                    continue
+        for key in financials_dict:
+            try:
+                financials_dict[key] = int(re.sub("[^0-9]", "", financials_dict[key]))
+            except Exception:
+                continue
 
-            return financials_dict
+        return financials_dict
 
-    listing_objs = listing_objs[:1]
+    def parse_details_div(details_soup):
+        details_tag_list = details_soup.contents
+        details_str = " ".join([str(element) for element in details_tag_list])
+        details_list = details_str.split("<dt>")[1:]
+        strs_to_tags = [BeautifulSoup(detail, "html.parser") for detail in details_list]
+        details_text = [tag.text for tag in strs_to_tags]
+        details_dict = list_to_dict(details_text)
+
+        return details_dict
+
     # Scrape all the listings (save response to an object)
     pool = AioPool(size=con_limit)
     await pool.map(fetch_obj_with_url, listing_objs)
@@ -97,13 +104,18 @@ async def fetch_listings(*, listing_objs, con_limit):
     # Parse available listing fields into a dict
     for listing_obj in listing_objs:
         soup = BeautifulSoup(listing_obj.response_text, "html.parser")
-        financials_dict = parse_financials_div(soup)
-        listing_obj.financials = financials_dict
 
-    pdb.set_trace()
-    # Price details
-    # Description
-    # Listing Details
+        # Price details
+        financials_soup = soup.find("div", {"class": "row-fluid b-margin financials clearfix"})
+        if financials_soup:
+            financials_dict = parse_financials_div(financials_soup)
+            listing_obj.financials = financials_dict
+
+        # Listing Details
+        details_soup = soup.find("dl", {"class": "listingProfile_details"})
+        if details_soup:
+            details_dict = parse_financials_div(details_soup)
+            listing_obj.details = details_dict
 
 
 async def fetch_listing_urls(*, con_limit):
@@ -300,3 +312,4 @@ if __name__ == "__main__":
     con_limit = 10
     listing_objs = asyncio.run(fetch_listing_urls(con_limit=con_limit))
     asyncio.run(fetch_listings(listing_objs=listing_objs, con_limit=con_limit))
+    pdb.set_trace()
