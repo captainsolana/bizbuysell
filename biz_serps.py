@@ -12,7 +12,11 @@ from tenacity import retry, stop_after_attempt
 
 
 def list_to_dict(rlist):
-    temp_dict = dict(map(lambda s: s.split(':'), rlist))
+    # QUEST: There are multiple colons in many of the entries.  I couldn't
+    # figure out how to use re.split where it only split the first occurence
+    # so instead I replace only the first occurence and then split that new str
+    list_with_replace_str = [re.sub(":", ":REPLACE", e, 1) for e in rlist]
+    temp_dict = dict(f.split(":REPLACE") for f in list_with_replace_str)
     clean_dict = {}
     for key in temp_dict.keys():
         clean_key = key.strip()
@@ -48,7 +52,7 @@ class Listing():
 
 
 def parse_listings(listing_objs):
-    def parse_financials_div(financials_soup):
+    def parse_financials_div(financials_soup, listing_obj):
         try:
             financials_text = financials_soup.text
             financials_list = financials_text.split("\r\n")[:-1]
@@ -72,7 +76,7 @@ def parse_listings(listing_objs):
             print(e)
             pdb.set_trace()
 
-    def parse_details_div(details_soup):
+    def parse_details_div(details_soup, listing_obj):
         try:
             details_tag_list = details_soup.contents
             details_str = " ".join([str(element) for element in details_tag_list])
@@ -85,23 +89,31 @@ def parse_listings(listing_objs):
         except Exception as e:
             print(e)
             pdb.set_trace()
-
     # Parse available listing fields into a dict
     for listing_obj in listing_objs:
-        print(f"Starting {listing_obj.url}")
-        soup = BeautifulSoup(listing_obj.response_text, "html.parser")
+        try:
+            index = listing_objs.index(listing_obj)
+            length = len(listing_objs)
+            print(f"#{index} of {length} {listing_obj.url}")
+            soup = BeautifulSoup(listing_obj.response_text, "html.parser")
 
-        # Price details
-        financials_soup = soup.find("div", {"class": "row-fluid b-margin financials clearfix"})
-        if financials_soup:
-            financials_dict = parse_financials_div(financials_soup)
-            listing_obj.financials = financials_dict
+            # Price details
+            financials_span_pattern = re.compile(r"Asking Price:")
+            financials_span_soup = soup.find("span", text=financials_span_pattern)
 
-        # Listing Details
-        details_soup = soup.find("dl", {"class": "listingProfile_details"})
-        if details_soup:
-            details_dict = parse_financials_div(details_soup)
-            listing_obj.details = details_dict
+            if financials_span_soup:
+                financials_soup = financials_span_soup.parent.parent.parent.parent
+                financials_dict = parse_financials_div(financials_soup, listing_obj)
+                listing_obj.financials = financials_dict
+
+            # Listing Details
+            details_soup = soup.find("dl", {"class": "listingProfile_details"})
+            if details_soup:
+                details_dict = parse_details_div(details_soup, listing_obj)
+                listing_obj.details = details_dict
+        except Exception as e:
+            print(e)
+            continue
 
 
 async def fetch_listings(*, listing_objs, con_limit):
@@ -346,4 +358,4 @@ def parse_listings_from_pkl():
 
 
 if __name__ == "__main__":
-    fetch_listing_html_write_to_pickle()
+    parse_listings_from_pkl()
