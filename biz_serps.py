@@ -5,24 +5,11 @@ import csv
 import httpx
 import json
 import os
+from progressbar import progressbar
 import pdb
 import pickle
 import re
 from tenacity import retry, stop_after_attempt
-
-
-def list_to_dict(rlist):
-    # QUEST: There are multiple colons in many of the entries.  I couldn't
-    # figure out how to use re.split where it only split the first occurence
-    # so instead I replace only the first occurence and then split that new str
-    list_with_replace_str = [re.sub(":", ":REPLACE", e, 1) for e in rlist]
-    temp_dict = dict(f.split(":REPLACE") for f in list_with_replace_str)
-    clean_dict = {}
-    for key in temp_dict.keys():
-        clean_key = key.strip()
-        clean_value = temp_dict[key].strip()
-        clean_dict[clean_key] = clean_value
-    return clean_dict
 
 
 class Serp():
@@ -49,6 +36,20 @@ class Listing():
 
     def __repr__(self):
         return self.custom_name
+
+
+def list_to_dict(rlist):
+    # QUEST: There are multiple colons in many of the entries.  I couldn't
+    # figure out how to use re.split where it only split the first occurence
+    # so instead I replace only the first occurence and then split that new str
+    list_with_replace_str = [re.sub(":", ":REPLACE", e, 1) for e in rlist]
+    temp_dict = dict(f.split(":REPLACE") for f in list_with_replace_str)
+    clean_dict = {}
+    for key in temp_dict.keys():
+        clean_key = key.strip()
+        clean_value = temp_dict[key].strip()
+        clean_dict[clean_key] = clean_value
+    return clean_dict
 
 
 def parse_listings(listing_objs):
@@ -90,11 +91,11 @@ def parse_listings(listing_objs):
             print(f"error {e}")
             pdb.set_trace()
     # Parse available listing fields into a dict
-    for listing_obj in listing_objs:
+    print("Parse financials and details for listings")
+    for listing_obj in progressbar(listing_objs):
         try:
             index = listing_objs.index(listing_obj)
             length = len(listing_objs)
-            print(f"#{index} of {length} {listing_obj.url}")
             soup = BeautifulSoup(listing_obj.response_text, "html.parser")
 
             # Price details
@@ -105,6 +106,9 @@ def parse_listings(listing_objs):
                 financials_soup = financials_span_soup.parent.parent.parent.parent
                 financials_dict = parse_financials_div(financials_soup, listing_obj)
                 listing_obj.financials = financials_dict
+            else:
+                print(f"Financials not present #{index} of {length} {listing_obj.url}")
+                print(soup)
 
             # Listing Details
             details_soup = soup.find("dl", {"class": "listingProfile_details"})
@@ -113,7 +117,6 @@ def parse_listings(listing_objs):
                 listing_obj.details = details_dict
         except Exception as e:
             print(f"error {e}")
-            continue
 
 
 async def fetch_listings(*, listing_objs, con_limit):
@@ -183,7 +186,7 @@ async def fetch_listing_urls(*, con_limit):
 
             return paginated_urls
 
-    @retry(stop=stop_after_attempt(5))
+    @retry(stop=stop_after_attempt(10))
     async def fetch_url(url):
         SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
         SCRAPERAPI_URL = 'http://api.scraperapi.com'
@@ -354,8 +357,7 @@ def run_listing_calculations(listing_obj):
     cashflow = listing_obj.financials["Cash Flow"]
     try:
         listing_obj.financials["Multiple"] = all_in_price / cashflow
-    except ZeroDivisionError as e:
-        print(e)
+    except Exception:
         listing_obj.financials["Multiple"] = "N/A"
 
 
@@ -377,13 +379,24 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    listing_objs = listing_objs[:1000]
-    parse_listings(listing_objs)
-    pdb.set_trace()
-    for listing_obj in listing_objs:
+    # listing_objs = listing_objs[:100]
+
+    print("Validate listing responses")
+    listing_resp_validated = []
+    for listing_obj in progressbar(listing_objs):
+        try:
+            if "Soup test failed" not in listing_obj.response_text:
+                listing_resp_validated.append(listing_obj)
+        except Exception:
+            continue
+    parse_listings(listing_resp_validated)
+
+    print("Perform listing calculations")
+    for listing_obj in progressbar(listing_resp_validated):
         financials_present = hasattr(listing_obj, "financials")
         if financials_present:
             run_listing_calculations(listing_obj)
+    pdb.set_trace()
 
 
 if __name__ == "__main__":
