@@ -73,7 +73,7 @@ def parse_listings(listing_objs):
 
             return financials_dict
         except Exception as e:
-            print(e)
+            print(f"error {e}")
             pdb.set_trace()
 
     def parse_details_div(details_soup, listing_obj):
@@ -87,7 +87,7 @@ def parse_listings(listing_objs):
 
             return details_dict
         except Exception as e:
-            print(e)
+            print(f"error {e}")
             pdb.set_trace()
     # Parse available listing fields into a dict
     for listing_obj in listing_objs:
@@ -112,7 +112,7 @@ def parse_listings(listing_objs):
                 details_dict = parse_details_div(details_soup, listing_obj)
                 listing_obj.details = details_dict
         except Exception as e:
-            print(e)
+            print(f"error {e}")
             continue
 
 
@@ -330,10 +330,24 @@ async def fetch_listing_urls(*, con_limit):
             if listing_obj_holding:
                 listing_objs.extend(listing_obj_holding)
         except Exception as e:
-            print(e)
+            print(f"error {e}")
             continue
 
     return listing_objs
+
+
+def run_listing_calculations(listing_obj):
+    # All in price
+    extra_costs = 0
+    price = listing_obj.financials["Asking Price"]
+    for item in listing_obj.financials["notIncluded"]:
+        if "Real Estate" not in item:
+            extra_costs += listing_obj.financials[item]
+    if isinstance(price, int):
+        all_in_price = listing_obj.financials["Asking Price"] + extra_costs
+    else:
+        all_in_price = listing_obj.financials["Asking Price"]
+    listing_obj.financials["allInPrice"] = all_in_price
 
 
 def full_function():
@@ -354,7 +368,13 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
+    listing_objs = listing_objs[:1000]
     parse_listings(listing_objs)
+    pdb.set_trace()
+    for listing_obj in listing_objs:
+        financials_present = hasattr(listing_obj, "financials")
+        if financials_present:
+            run_listing_calculations(listing_obj)
 
 
 if __name__ == "__main__":
