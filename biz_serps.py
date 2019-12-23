@@ -349,6 +349,15 @@ def run_listing_calculations(listing_obj):
         all_in_price = listing_obj.financials["Asking Price"]
     listing_obj.financials["allInPrice"] = all_in_price
 
+    # Multiple
+    all_in_price = listing_obj.financials["allInPrice"]
+    cashflow = listing_obj.financials["Cash Flow"]
+    try:
+        listing_obj.financials["Multiple"] = all_in_price / cashflow
+    except ZeroDivisionError as e:
+        print(e)
+        listing_obj.financials["Multiple"] = "N/A"
+
 
 def full_function():
     con_limit = 25
