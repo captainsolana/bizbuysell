@@ -2,6 +2,7 @@ import asyncio
 from asyncio_pool import AioPool
 from bs4 import BeautifulSoup
 import csv
+from datetime import date
 import httpx
 import json
 import os
@@ -27,6 +28,7 @@ class Listing():
     def __init__(self, custom_name, **entries):
         self.__dict__.update(entries)
         self.custom_name = custom_name
+        self.date_accessed = date.today()
 
     def __hash__(self):
         return hash(self.custom_name)
@@ -367,6 +369,26 @@ def full_function():
     asyncio.run(fetch_listings(listing_objs=listing_objs, con_limit=con_limit))
     parse_listings(listing_objs)
 
+    print("Validate listing responses")
+    listing_resp_validated = []
+    for listing_obj in progressbar(listing_objs):
+        try:
+            if "Soup test failed" not in listing_obj.response_text:
+                listing_resp_validated.append(listing_obj)
+        except Exception:
+            continue
+
+    parse_listings(listing_resp_validated)
+
+    print("Perform listing calculations")
+    for listing_obj in progressbar(listing_resp_validated):
+        financials_present = hasattr(listing_obj, "financials")
+        if financials_present:
+            run_listing_calculations(listing_obj)
+
+    print("Analysis complete.  Maybe write to a file?")
+    pdb.set_trace()
+
 
 def fetch_listing_html_write_to_pickle():
     con_limit = 25
@@ -379,7 +401,7 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    # listing_objs = listing_objs[:100]
+    # listing_objs = listing_objs[:5000]
 
     print("Validate listing responses")
     listing_resp_validated = []
@@ -396,8 +418,9 @@ def parse_listings_from_pkl():
         financials_present = hasattr(listing_obj, "financials")
         if financials_present:
             run_listing_calculations(listing_obj)
+
     pdb.set_trace()
 
 
 if __name__ == "__main__":
-    parse_listings_from_pkl()
+    full_function()
