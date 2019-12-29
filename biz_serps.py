@@ -93,7 +93,7 @@ def parse_listings(listing_objs):
             print(f"error {e}")
             pdb.set_trace()
 
-    def find_category(product_json_soup, listing_obj):
+    def parse_category(product_json_soup, listing_obj):
         product_json_str = product_json_soup.contents[0].replace("\r", "").replace("\n", "")
         product_json_str = product_json_str.replace("\'", "").replace('\\"', '').replace("\t", "")
         product_dict = json.loads(product_json_str)
@@ -107,6 +107,12 @@ def parse_listings(listing_objs):
         except Exception:
             listing_obj.category["sub_category"] = "Not Present"
 
+    def parse_address(address_json_soup, listing_obj):
+        address_json_str = address_json_soup.contents[0].replace("\r", "").replace("\n", "")
+        address_json_str = address_json_str.replace("\'", "").replace('\\"', '').replace("\t", "")
+        address_dict = json.loads(address_json_str)
+        listing_obj.address = address_dict["address"]
+
     # Parse available listing fields into a dict
     print("Parse financials and details for listings")
     for listing_obj in progressbar(listing_objs):
@@ -116,10 +122,16 @@ def parse_listings(listing_objs):
             soup = BeautifulSoup(listing_obj.response_text, "html.parser")
 
             # Parse category
-            product_json_pattern = re.compile(r"\"@type\" : \"Product\"")
-            product_json_soup = soup.find("script", {"type": "application/ld+json"}, text=product_json_pattern)
-            if product_json_soup:
-                find_category(product_json_soup, listing_obj)
+            category_json_pattern = re.compile(r"\"@type\" : \"Product\"")
+            category_json_soup = soup.find("script", {"type": "application/ld+json"}, text=category_json_pattern)
+            if category_json_soup:
+                parse_category(category_json_soup, listing_obj)
+
+            # Parse address
+            address_json_pattern = re.compile(r"LocalBusiness")
+            address_json_soup = soup.find("script", {"type": "application/ld+json"}, text=address_json_pattern)
+            if address_json_soup:
+                parse_address(address_json_soup, listing_obj)
 
             # Price details
             financials_span_pattern = re.compile(r"Asking Price:")
@@ -422,7 +434,7 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    listing_objs = listing_objs[:500]
+    # listing_objs = listing_objs[:40]
 
     print("Validate listing responses")
     listing_resp_validated = []
@@ -433,14 +445,11 @@ def parse_listings_from_pkl():
         except Exception:
             continue
     parse_listings(listing_resp_validated)
-
     print("Perform listing calculations")
     for listing_obj in progressbar(listing_resp_validated):
         financials_present = hasattr(listing_obj, "financials")
         if financials_present:
             run_listing_calculations(listing_obj)
-
-    pdb.set_trace()
 
 
 if __name__ == "__main__":
