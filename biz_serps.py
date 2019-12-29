@@ -404,6 +404,10 @@ def write_listings_to_db(listing_objs):
     db = client["bizbuysell"]
     collection = db["listings"]
     listing_dicts = [obj.__dict__ for obj in listing_objs]
+    # Clean out response_text
+    for listing in listing_dicts:
+        if "response_text" in listing:
+            del listing["response_text"]
     collection.insert_many(listing_dicts)
     pdb.set_trace()
 
@@ -431,7 +435,10 @@ def full_function():
         if financials_present:
             run_listing_calculations(listing_obj)
 
-    print("Analysis complete.  Maybe write to a file?")
+    print("Analysis complete.  Write listings to DB")
+    write_listings_to_db(listing_objs)
+
+    print("Just in case you want to do something else :)")
     pdb.set_trace()
 
 
