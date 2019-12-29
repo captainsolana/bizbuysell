@@ -344,7 +344,7 @@ async def fetch_listing_urls(*, con_limit):
         del categories["name"]
 
     serp_objects = generate_serp_objs()
-    serp_objects = serp_objects[155:156]
+    # serp_objects = serp_objects[155:156]
 
     print(f"{len(serp_objects)} categories to process")
     pool = AioPool(size=con_limit)
@@ -487,4 +487,4 @@ def parse_listings_from_pkl():
 
 
 if __name__ == "__main__":
-    parse_listings_from_pkl()
+    full_function()
