@@ -6,14 +6,24 @@ For the initial scrape
 - [x] Fetch listings
 
 For updates
-- [] Get SERPs (use functions from initial fetch)
-- [] Check listing URLs against our db
-- [] Fetch listings that aren't in the db
+- [x] Get SERPs (use functions from initial fetch)
+- [x] Check listing URLs against our db
+- [x] Fetch listings that aren't in the db
 
 For removed listings
 - [] Check documents for ```date_last_not_seen``` flag
 - [] If not present, get listing url responses
 - [] Check response for "doesn't exist" string 
+
+# Setting it up to run regularly
+https://www.maketecheasier.com/use-launchd-run-scripts-on-schedule-macos/
+
+First, I bash command is needed:
+```/Users/work/Dropbox/bash-scripts/landwatchquantitybash.sh```
+Second a plist command is needed
+```~/Library/LaunchAgents/local.work.bizbuysell.plist```
+Run this command to load the launch file
+```launchctl load ~/Library/LaunchAgents/local.work.bizbuysellupdate.plist```
 
 
 # Search
