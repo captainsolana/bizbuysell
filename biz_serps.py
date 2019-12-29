@@ -101,7 +101,7 @@ def parse_listings(listing_objs):
         product_dict = json.loads(product_json_str)
         category_str = product_dict["category"]
         category_list = category_str.split(">")
-
+        category_list = [category.strip() for category in category_list]
         listing_obj.category = {}
         listing_obj.category["parent_category"] = category_list[0]
         try:
