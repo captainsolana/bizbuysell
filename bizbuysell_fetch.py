@@ -351,16 +351,19 @@ async def fetch_listing_urls(*, con_limit):
     await pool.map(fetch_obj_with_url, progressbar(serp_objects))
 
     paginated_url_list = []
-    for obj in serp_objects:
+    print("Create paginated urls")
+    for obj in progressbar(serp_objects):
         paginated_urls = create_paginated_urls(obj)
         if paginated_urls:
             paginated_url_list.extend(paginated_urls)
 
-    print("paginated_url_response_list")
-    paginated_url_response_list = await pool.map(fetch_url, progressbar(paginated_url_list))
-
     serp_response_list = [obj.response_text for obj in serp_objects]
-    serp_response_list.extend(paginated_url_response_list)
+
+    if len(paginated_url_list) > 0:
+        print("paginated_url_response_list")
+        paginated_url_response_list = await pool.map(fetch_url, progressbar(paginated_url_list))
+
+        serp_response_list.extend(paginated_url_response_list)
 
     # Get Listing Objs
     listing_objs = []
@@ -421,6 +424,7 @@ def write_listings_to_db(listing_objs):
     # Make sure listings_not_in_db isn't empty
     if len(listings_not_in_db):
         collection.insert_many(listings_not_in_db)
+        print(f"{len(listings_not_in_db)} written")
 
 
 def full_function():
