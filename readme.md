@@ -1,8 +1,19 @@
 # Big Structure
 
+For the initial scrape
 - [x] Get starting SERP urls
 - [x] Get listing urls
-- [] Scrape listings
+- [x] Fetch listings
+
+For updates
+- [] Get SERPs (use functions from initial fetch)
+- [] Check listing URLs against our db
+- [] Fetch listings that aren't in the db
+
+For removed listings
+- [] Check documents for ```date_last_not_seen``` flag
+- [] If not present, get listing url responses
+- [] Check response for "doesn't exist" string 
 
 
 # Search
