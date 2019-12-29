@@ -404,12 +404,22 @@ def write_listings_to_db(listing_objs):
     db = client["bizbuysell"]
     collection = db["listings"]
     listing_dicts = [obj.__dict__ for obj in listing_objs]
+
     # Clean out response_text
     for listing in listing_dicts:
         if "response_text" in listing:
             del listing["response_text"]
-    collection.insert_many(listing_dicts)
-    pdb.set_trace()
+    listings_not_in_db = []
+    for listing in listing_dicts:
+        url = listing["url"]
+        count_cursor = collection.find({"url": url}, {"_id": 1}).limit(1)
+        count = count_cursor.count()
+        if count < 1:
+            listings_not_in_db.append(listing)
+
+    # Make sure listings_not_in_db isn't empty
+    if len(listings_not_in_db):
+        collection.insert_many(listings_not_in_db)
 
 
 def full_function():
@@ -453,7 +463,7 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    listing_objs = listing_objs[:40]
+    listing_objs = listing_objs[:80]
 
     print("Validate listing responses")
     listing_resp_validated = []
