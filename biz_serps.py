@@ -9,7 +9,9 @@ import os
 from progressbar import progressbar
 import pdb
 import pickle
+import pymongo
 import re
+import ssl
 from tenacity import retry, stop_after_attempt
 
 
@@ -396,6 +398,16 @@ def run_listing_calculations(listing_obj):
         listing_obj.financials["Multiple"] = "N/A"
 
 
+def write_listings_to_db(listing_objs):
+    MONGO_URI = "mongodb+srv://bizbuyselluser:passwd21@cluster0-griyk.mongodb.net/test?retryWrites=true&w=majority"
+    client = pymongo.MongoClient(MONGO_URI, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)
+    db = client["bizbuysell"]
+    collection = db["listings"]
+    listing_dicts = [obj.__dict__ for obj in listing_objs]
+    collection.insert_many(listing_dicts)
+    pdb.set_trace()
+
+
 def full_function():
     con_limit = 25
     listing_objs = asyncio.run(fetch_listing_urls(con_limit=con_limit))
@@ -434,7 +446,7 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    # listing_objs = listing_objs[:40]
+    listing_objs = listing_objs[:40]
 
     print("Validate listing responses")
     listing_resp_validated = []
@@ -450,6 +462,11 @@ def parse_listings_from_pkl():
         financials_present = hasattr(listing_obj, "financials")
         if financials_present:
             run_listing_calculations(listing_obj)
+
+    write_listings_to_db(listing_objs)
+
+    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221_parsed.pkl", "wb") as outfile:
+        pickle.dump(listing_objs, outfile)
 
 
 if __name__ == "__main__":
