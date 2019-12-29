@@ -92,6 +92,21 @@ def parse_listings(listing_objs):
         except Exception as e:
             print(f"error {e}")
             pdb.set_trace()
+
+    def find_category(product_json_soup, listing_obj):
+        product_json_str = product_json_soup.contents[0].replace("\r", "").replace("\n", "")
+        product_json_str = product_json_str.replace("\'", "").replace('\\"', '').replace("\t", "")
+        product_dict = json.loads(product_json_str)
+        category_str = product_dict["category"]
+        category_list = category_str.split(">")
+
+        listing_obj.category = {}
+        listing_obj.category["parent_category"] = category_list[0]
+        try:
+            listing_obj.category["sub_category"] = category_list[1]
+        except Exception:
+            listing_obj.category["sub_category"] = "Not Present"
+
     # Parse available listing fields into a dict
     print("Parse financials and details for listings")
     for listing_obj in progressbar(listing_objs):
@@ -99,6 +114,12 @@ def parse_listings(listing_objs):
             index = listing_objs.index(listing_obj)
             length = len(listing_objs)
             soup = BeautifulSoup(listing_obj.response_text, "html.parser")
+
+            # Parse category
+            product_json_pattern = re.compile(r"\"@type\" : \"Product\"")
+            product_json_soup = soup.find("script", {"type": "application/ld+json"}, text=product_json_pattern)
+            if product_json_soup:
+                find_category(product_json_soup, listing_obj)
 
             # Price details
             financials_span_pattern = re.compile(r"Asking Price:")
@@ -286,7 +307,7 @@ async def fetch_listing_urls(*, con_limit):
             "WY": "Wyoming"
         }
 
-        data_objects = []
+        serp_objects = []
         for state in states:
             for category in categories:
                 # Example URL
@@ -300,31 +321,31 @@ async def fetch_listing_urls(*, con_limit):
                     name=f"{state}-{category.replace(' ', '_')}",
                     url=f"{base_url}/{states[state]}/{category}-{companies_str}"
                 )
-                data_objects.append(serp_object)
+                serp_objects.append(serp_object)
 
-        return data_objects
+        return serp_objects
 
     with open("category_arguments.csv", mode="r", encoding="utf-8-sig") as csv_file:
         reader = csv.reader(csv_file)
         categories = {rows[0]: rows[1] for rows in reader}
         del categories["name"]
 
-    data_objects = generate_serp_objs()
-    # data_objects = data_objects[155:160]
+    serp_objects = generate_serp_objs()
+    serp_objects = serp_objects[155:160]
 
-    print(f"{len(data_objects)} categories to process")
+    print(f"{len(serp_objects)} categories to process")
     pool = AioPool(size=con_limit)
-    await pool.map(fetch_obj_with_url, data_objects)
+    await pool.map(fetch_obj_with_url, serp_objects)
 
     paginated_url_list = []
-    for obj in data_objects:
+    for obj in serp_objects:
         paginated_urls = create_paginated_urls(obj)
         if paginated_urls:
             paginated_url_list.extend(paginated_urls)
 
     paginated_url_response_list = await pool.map(fetch_url, paginated_url_list)
 
-    serp_response_list = [obj.response_text for obj in data_objects]
+    serp_response_list = [obj.response_text for obj in serp_objects]
     serp_response_list.extend(paginated_url_response_list)
 
     # Get Listing Objs
@@ -401,7 +422,7 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    # listing_objs = listing_objs[:5000]
+    listing_objs = listing_objs[:500]
 
     print("Validate listing responses")
     listing_resp_validated = []
@@ -423,4 +444,4 @@ def parse_listings_from_pkl():
 
 
 if __name__ == "__main__":
-    full_function()
+    parse_listings_from_pkl()
