@@ -2,7 +2,7 @@ import asyncio
 from asyncio_pool import AioPool
 from bs4 import BeautifulSoup
 import csv
-from datetime import date
+import datetime
 import httpx
 import json
 import os
@@ -30,7 +30,7 @@ class Listing():
     def __init__(self, custom_name, **entries):
         self.__dict__.update(entries)
         self.custom_name = custom_name
-        self.date_accessed = date.today()
+        self.date_accessed = datetime.datetime.today()
 
     def __hash__(self):
         return hash(self.custom_name)
@@ -167,19 +167,18 @@ async def fetch_listings(*, listing_objs, con_limit):
         }
 
         async with httpx.AsyncClient() as client:
-            print(f"Trying {obj.custom_name}")
             r = await client.get(SCRAPERAPI_URL, params=param_payload, timeout=60)
             test_soup = BeautifulSoup(r.text, 'html.parser')
             if test_soup.find("h1", {"class": "bfsTitle"}):
                 obj.response_text = r.text
-                print(f"{obj.custom_name} complete!")
             else:
                 obj.response_text = "Soup test failed"
                 raise ValueError(f"Soup test failed for {obj.custom_name}")
 
     # Scrape all the listings (save response to an object)
     pool = AioPool(size=con_limit)
-    await pool.map(fetch_obj_with_url, listing_objs)
+    print("fetch_obj_with_url")
+    await pool.map(fetch_obj_with_url, progressbar(listing_objs))
 
 
 async def fetch_listing_urls(*, con_limit):
@@ -234,11 +233,11 @@ async def fetch_listing_urls(*, con_limit):
         }
 
         async with httpx.AsyncClient() as client:
-            print(f"Trying #{paginated_url_list.index(url)}")
+            # print(f"Trying #{paginated_url_list.index(url)}")
             r = await client.get(SCRAPERAPI_URL, params=param_payload, timeout=60)
             test_soup = BeautifulSoup(r.text, 'html.parser')
             if test_soup.find("h1", {"class": "search-result-h1"}):
-                print(f"{paginated_url_list.index(url)} complete!")
+                # print(f"{paginated_url_list.index(url)} complete!")
                 return r.text
             else:
                 obj.response_text = "Soup test failed"
@@ -254,12 +253,12 @@ async def fetch_listing_urls(*, con_limit):
         }
 
         async with httpx.AsyncClient() as client:
-            print(f"Trying {obj.name}")
+            # print(f"Trying {obj.name}")
             r = await client.get(SCRAPERAPI_URL, params=param_payload, timeout=60)
             test_soup = BeautifulSoup(r.text, 'html.parser')
             if test_soup.find("h1", {"class": "search-result-h1"}):
                 obj.response_text = r.text
-                print(f"{obj.name} complete!")
+                # print(f"{obj.name} complete!")
             else:
                 obj.response_text = "Soup test failed"
                 raise ValueError(f"Soup test failed for {obj.name}")
@@ -345,11 +344,11 @@ async def fetch_listing_urls(*, con_limit):
         del categories["name"]
 
     serp_objects = generate_serp_objs()
-    serp_objects = serp_objects[155:160]
+    serp_objects = serp_objects[155:156]
 
     print(f"{len(serp_objects)} categories to process")
     pool = AioPool(size=con_limit)
-    await pool.map(fetch_obj_with_url, serp_objects)
+    await pool.map(fetch_obj_with_url, progressbar(serp_objects))
 
     paginated_url_list = []
     for obj in serp_objects:
@@ -357,7 +356,8 @@ async def fetch_listing_urls(*, con_limit):
         if paginated_urls:
             paginated_url_list.extend(paginated_urls)
 
-    paginated_url_response_list = await pool.map(fetch_url, paginated_url_list)
+    print("paginated_url_response_list")
+    paginated_url_response_list = await pool.map(fetch_url, progressbar(paginated_url_list))
 
     serp_response_list = [obj.response_text for obj in serp_objects]
     serp_response_list.extend(paginated_url_response_list)
@@ -410,11 +410,12 @@ def write_listings_to_db(listing_objs):
         if "response_text" in listing:
             del listing["response_text"]
     listings_not_in_db = []
-    for listing in listing_dicts:
+    print("Check db for duplicates")
+    for listing in progressbar(listing_dicts):
         url = listing["url"]
-        count_cursor = collection.find({"url": url}, {"_id": 1}).limit(1)
-        count = count_cursor.count()
-        if count < 1:
+        # count_cursor = collection.find({"url": url}, {"_id": 1}).limit(1)
+        # count = count_cursor.count()
+        if collection.count_documents({"url": url}) == 0:
             listings_not_in_db.append(listing)
 
     # Make sure listings_not_in_db isn't empty
@@ -426,7 +427,6 @@ def full_function():
     con_limit = 25
     listing_objs = asyncio.run(fetch_listing_urls(con_limit=con_limit))
     asyncio.run(fetch_listings(listing_objs=listing_objs, con_limit=con_limit))
-    parse_listings(listing_objs)
 
     print("Validate listing responses")
     listing_resp_validated = []
@@ -463,7 +463,7 @@ def fetch_listing_html_write_to_pickle():
 def parse_listings_from_pkl():
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    listing_objs = listing_objs[:80]
+    listing_objs = listing_objs[80:200]
 
     print("Validate listing responses")
     listing_resp_validated = []
