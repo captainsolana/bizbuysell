@@ -422,8 +422,18 @@ def write_listings_to_db(listing_objs):
             listings_not_in_db.append(listing)
 
     # Make sure listings_not_in_db isn't empty
-    if len(listings_not_in_db):
-        collection.insert_many(listings_not_in_db)
+    if len(listings_not_in_db) > 0:
+        # Quest: there's got to be a better way to do this
+        # but, I don't want an issue with a single listing to
+        # cause all of the listings not to be written.
+        print("Write listings to db")
+        for listing in progressbar(listings_not_in_db):
+            try:
+                collection.insert_one(listing)
+            except Exception as e:
+                print(e)
+                print(listing["url"])
+                continue
         print(f"{len(listings_not_in_db)} written")
 
 
@@ -460,14 +470,14 @@ def fetch_listing_html_write_to_pickle():
     con_limit = 25
     listing_objs = asyncio.run(fetch_listing_urls(con_limit=con_limit))
     asyncio.run(fetch_listings(listing_objs=listing_objs, con_limit=con_limit))
-    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "wb") as outfile:
+    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191231.pkl", "wb") as outfile:
         pickle.dump(listing_objs, outfile)
 
 
 def parse_listings_from_pkl():
-    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221.pkl", "rb") as infile:
+    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191231.pkl", "rb") as infile:
         listing_objs = pickle.load(infile)
-    listing_objs = listing_objs[80:200]
+    # listing_objs = listing_objs[80:200]
 
     print("Validate listing responses")
     listing_resp_validated = []
@@ -486,7 +496,7 @@ def parse_listings_from_pkl():
 
     write_listings_to_db(listing_objs)
 
-    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191221_parsed.pkl", "wb") as outfile:
+    with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191231_parsed.pkl", "wb") as outfile:
         pickle.dump(listing_objs, outfile)
 
 
