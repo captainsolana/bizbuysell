@@ -18,10 +18,10 @@ For removed listings
 # Setting it up to run regularly
 https://www.maketecheasier.com/use-launchd-run-scripts-on-schedule-macos/
 
-First, I bash command is needed:
-```/Users/work/Dropbox/bash-scripts/landwatchquantitybash.sh```
+First, a bash command is needed:
+```/Users/work/Dropbox/bash-scripts/bizbuysell_update_bash.sh```
 Second a plist command is needed
-```~/Library/LaunchAgents/local.work.bizbuysell.plist```
+```~/Library/LaunchAgents/local.work.bizbuysellupdate.plist```
 Run this command to load the launch file
 ```launchctl load ~/Library/LaunchAgents/local.work.bizbuysellupdate.plist```
 
