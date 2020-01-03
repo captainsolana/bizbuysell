@@ -401,7 +401,7 @@ def run_listing_calculations(listing_obj):
         listing_obj.financials["Multiple"] = "N/A"
 
 
-def write_listinigs_to_db_remote(listing_objs):
+def write_listings_to_db_remote(listing_objs):
     MONGO_URI = "mongodb+srv://bizbuyselluser:passwd21@cluster0-griyk.mongodb.net/test?retryWrites=true&w=majority"
     client = pymongo.MongoClient(MONGO_URI, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)
     db = client["bizbuysell"]
@@ -437,7 +437,7 @@ def write_listinigs_to_db_remote(listing_objs):
         print(f"{len(listings_not_in_db)} written")
 
 
-def write_listinigs_to_db_local(listing_objs):
+def write_listings_to_db_local(listing_objs):
     MONGO_URI = "mongodb://127.0.0.1:27017/"
     client = pymongo.MongoClient(MONGO_URI)
     db = client["bizbuysell"]
@@ -496,7 +496,7 @@ def full_function():
             run_listing_calculations(listing_obj)
 
     print("Analysis complete.  Write listings to DB")
-    write_listinigs_to_db_remote(listing_objs)
+    write_listings_to_db_remote(listing_objs)
 
     print("Just in case you want to do something else :)")
     pdb.set_trace()
@@ -530,7 +530,7 @@ def parse_listings_from_pkl():
         if financials_present:
             run_listing_calculations(listing_obj)
 
-    write_listinigs_to_db_local(listing_objs)
+    write_listings_to_db_local(listing_objs)
 
     with open("/Users/work/Dropbox/Projects/Working Data/bizbuysell/listings20191231_parsed.pkl", "wb") as outfile:
         pickle.dump(listing_objs, outfile)

@@ -1,13 +1,12 @@
 import asyncio
-from bizbuysell_fetch import fetch_listing_urls, fetch_listings, parse_listings, run_listing_calculations, write_listings_to_db
+from bizbuysell_fetch import fetch_listing_urls, fetch_listings, parse_listings, run_listing_calculations, write_listings_to_db_local
 from progressbar import progressbar
 import pymongo
-import ssl
 
 
 def check_if_urls_in_db(listing_objs):
-    MONGO_URI = "mongodb+srv://bizbuyselluser:passwd21@cluster0-griyk.mongodb.net/test?retryWrites=true&w=majority"
-    client = pymongo.MongoClient(MONGO_URI, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)
+    MONGO_URI = "mongodb://127.0.0.1:27017/"
+    client = pymongo.MongoClient(MONGO_URI)
     db = client["bizbuysell"]
     collection = db["listings"]
 
@@ -46,4 +45,4 @@ if __name__ == "__main__":
             run_listing_calculations(listing_obj)
 
     print("Analysis complete.  Write listings to DB")
-    write_listings_to_db(listing_objs)
+    write_listings_to_db_local(listing_objs)
