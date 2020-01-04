@@ -1,5 +1,6 @@
 import asyncio
 from bizbuysell_fetch import fetch_listing_urls, fetch_listings, parse_listings, run_listing_calculations, write_listings_to_db_local
+from bizbuysell_filter_and_export import filter_objects_and_write_to_csv
 from progressbar import progressbar
 import pymongo
 
@@ -29,7 +30,7 @@ if __name__ == "__main__":
 
     print("Validate listing responses")
     listing_resp_validated = []
-    for listing_obj in progressbar(listing_objs):
+    for listing_obj in progressbar(new_listings):
         try:
             if "Soup test failed" not in listing_obj.response_text:
                 listing_resp_validated.append(listing_obj)
@@ -45,4 +46,9 @@ if __name__ == "__main__":
             run_listing_calculations(listing_obj)
 
     print("Analysis complete.  Write listings to DB")
-    write_listings_to_db_local(listing_objs)
+    write_listings_to_db_local(listing_resp_validated)
+
+    print("Analysis complete.  Write listings to CSV")
+    OUTFILE = "/Users/work/Dropbox/Projects/Working Data/bizbuysell/listing_tracker.csv"
+    filter_objects_and_write_to_csv(listing_resp_validated, OUTFILE)
+    print(f"Listings appended to {OUTFILE}")
