@@ -11,9 +11,15 @@ For updates
 - [x] Fetch listings that aren't in the db
 
 For removed listings
-- [] Check documents for ```date_last_not_seen``` flag
-- [] If not present, get listing url responses
-- [] Check response for "doesn't exist" string 
+1) Scrape urls from SERPs
+2) If a new URL is in the SERP scrape the listing
+3) If an old URL is NOT in the SERP, flag it
+- Get serp_listing_urls = [obj.url for obj in listing_objs]
+- Fetch all URLs in db without a date_not_found: %date%. current_db_urls
+- Remove the urls not found in the db from the listing_urls. serp_listing_urls - new_listings
+- Remove current_db_urls from serp_listing_urls.
+- Remaining urls are no longer active listings in the serps
+- Find docs with those fields and add flag date_not_found as today
 
 # Setting it up to run regularly
 https://www.maketecheasier.com/use-launchd-run-scripts-on-schedule-macos/
