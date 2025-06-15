@@ -266,65 +266,17 @@ async def fetch_listing_urls(*, con_limit):
     def generate_serp_objs():
         # x=1 hides listing with no asking price.
         # hb=h hides home based businesses
+        # Focus only on Texas for Williamson County businesses
 
         states = {
-            "AK": "Alaska",
-            "AL": "Alabama",
-            "AR": "Arkansas",
-            "AZ": "Arizona",
-            "CA": "California",
-            "CO": "Colorado",
-            "CT": "Connecticut",
-            "DE": "Delaware",
-            "FL": "Florida",
-            "GA": "Georgia",
-            "HI": "Hawaii",
-            "IA": "Iowa",
-            "ID": "Idaho",
-            "IL": "Illinois",
-            "IN": "Indiana",
-            "KS": "Kansas",
-            "KY": "Kentucky",
-            "LA": "Louisiana",
-            "MA": "Massachusetts",
-            "MD": "Maryland",
-            "ME": "Maine",
-            "MI": "Michigan",
-            "MN": "Minnesota",
-            "MO": "Missouri",
-            "MS": "Mississippi",
-            "MT": "Montana",
-            "NC": "North Carolina",
-            "ND": "North Dakota",
-            "NE": "Nebraska",
-            "NH": "New Hampshire",
-            "NJ": "New Jersey",
-            "NM": "New Mexico",
-            "NV": "Nevada",
-            "NY": "New York",
-            "OH": "Ohio",
-            "OK": "Oklahoma",
-            "OR": "Oregon",
-            "PA": "Pennsylvania",
-            "RI": "Rhode Island",
-            "SC": "South Carolina",
-            "SD": "South Dakota",
-            "TN": "Tennessee",
-            "TX": "Texas",
-            "UT": "Utah",
-            "VA": "Virginia",
-            "VT": "Vermont",
-            "WA": "Washington",
-            "WI": "Wisconsin",
-            "WV": "West Virginia",
-            "WY": "Wyoming"
+            "TX": "texas"
         }
 
         serp_objects = []
         for state in states:
             for category in categories:
                 # Example URL
-                # https://www.bizbuysell.com/florida/restaurants-and-food-businesses-for-sale
+                # https://www.bizbuysell.com/texas/restaurants-and-food-businesses-for-sale
 
                 base_url = "https://www.bizbuysell.com"
                 companies_str = "businesses-for-sale"
@@ -471,6 +423,43 @@ def write_listings_to_db_local(listing_objs):
                 print(listing["url"])
                 continue
         print(f"{len(listings_not_in_db)} written")
+
+
+def filter_williamson_county_listings(listing_objs):
+    """
+    Filter listings to only include businesses in Williamson County, TX
+    """
+    williamson_county_listings = []
+    williamson_county_cities = [
+        'austin', 'cedar park', 'georgetown', 'round rock', 'leander', 
+        'pflugerville', 'hutto', 'taylor', 'liberty hill', 'jarrell',
+        'florence', 'weir', 'granger', 'bartlett', 'coupland', 'thrall'
+    ]
+    
+    print("Filtering for Williamson County, TX listings")
+    for listing_obj in progressbar(listing_objs):
+        try:
+            if hasattr(listing_obj, 'address') and listing_obj.address:
+                address_text = str(listing_obj.address).lower()
+                
+                # Check if listing is in Texas and specifically Williamson County
+                if 'tx' in address_text or 'texas' in address_text:
+                    # Check for Williamson County cities or direct county reference
+                    is_williamson_county = (
+                        'williamson county' in address_text or
+                        'williamson co' in address_text or
+                        any(city in address_text for city in williamson_county_cities)
+                    )
+                    
+                    if is_williamson_county:
+                        williamson_county_listings.append(listing_obj)
+                        print(f"Found Williamson County listing: {listing_obj.custom_name} - {listing_obj.address}")
+        except Exception as e:
+            print(f"Error filtering listing {listing_obj.custom_name}: {e}")
+            continue
+    
+    print(f"Found {len(williamson_county_listings)} listings in Williamson County, TX out of {len(listing_objs)} total Texas listings")
+    return williamson_county_listings
 
 
 def full_function():
