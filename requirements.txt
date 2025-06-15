@@ -1,0 +1,7 @@
+asyncio-pool
+beautifulsoup4
+httpx
+pandas
+progressbar2
+pymongo
+tenacity
